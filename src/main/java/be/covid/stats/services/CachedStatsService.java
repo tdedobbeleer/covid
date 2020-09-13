@@ -12,9 +12,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import reactor.core.publisher.Flux;
 
+import javax.annotation.PostConstruct;
 import java.time.LocalDate;
-import java.util.LinkedHashMap;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static be.covid.stats.utils.DateConversionUtils.*;
@@ -48,9 +50,18 @@ public class CachedStatsService implements StatsService {
             .loader(totalPerDyCacheLoader())
             .build();
 
+    private List<String> cities = List.of();
+    private List<String> provinces = List.of();
+
+    @PostConstruct
+    public void preloadCache() {
+        cachedResponses.get(AGE_SEX_KEY);
+        provinces = collectProvinces();
+    }
+
     @Override
     public Flux<CasesPerDayDTO> getCasesPerDay(int maxDays) {
-        return Flux.fromStream(IntStream.range(1, ++maxDays).boxed())
+        return Flux.fromStream(IntStream.range(1, ++maxDays).boxed().sorted(Collections.reverseOrder()))
                 .map(i -> {
                     String date = convert(LocalDate.now().minusDays(i), JSON_DATE_FORMAT);
                     return CasesPerDayDTO.builder()
@@ -59,15 +70,18 @@ public class CachedStatsService implements StatsService {
                 });
     }
 
+    @Override
+    public Flux<String> getProvinces(String q) {
+        return Flux.fromIterable(provinces)
+                .filter(s -> q == null || q.equals("*") || q.isBlank() || s.contains(q));
+
+    }
+
     private Integer totalFor(String json, String date) {
         JSONArray jsonArray = JsonPath.read(json, "$.[?(@.DATE=='" + date + "')]");
         return jsonArray.parallelStream()
-                .map(e -> {
-                    if (e instanceof LinkedHashMap) {
-                        return (int) ((LinkedHashMap) e).get("CASES");
-                    }
-                    return 0;
-                })
+                .map(e -> this.<Integer>getKey(e, "CASES"))
+                .map(i -> i == null ? 0 : i)
                 .mapToInt(Integer::intValue)
                 .sum();
     }
@@ -79,5 +93,24 @@ public class CachedStatsService implements StatsService {
                 return totalFor(cachedResponses.get(AGE_SEX_KEY), key);
             }
         };
+    }
+
+    private List<String> collectProvinces() {
+        String json = cachedResponses.get(AGE_SEX_KEY);
+        JSONArray jsonArray = JsonPath.read(json, "$.[*]");
+        return jsonArray.parallelStream()
+                .map(e -> this.<String>getKey(e, "PROVINCE"))
+                .filter(Objects::nonNull)
+                .distinct()
+                .sorted(Comparator.naturalOrder())
+                .collect(Collectors.toList());
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> T getKey(Object e, String name) {
+        if (e instanceof LinkedHashMap) {
+            return (T) ((LinkedHashMap) e).get(name);
+        }
+        return null;
     }
 }
