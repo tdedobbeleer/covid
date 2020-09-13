@@ -8,51 +8,147 @@
             crossorigin="anonymous"
             integrity="sha256-9/aliU8dGd2tb6OSsuzixeV4y/faTqgFtohetphbbj0="
             src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script crossorigin="anonymous" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+            src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+
     <link crossorigin="anonymous" href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.css"
           integrity="sha512-SUJFImtiT87gVCOXl3aGC00zfDl6ggYAw5+oheJvRJ8KBXZrr/TMISSdVJ5bBarbQDRC2pR5Kto3xTR0kpZInA=="
           rel="stylesheet"/>
     <link crossorigin="anonymous" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
           integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" rel="stylesheet">
-    <script>
-        (function ($) {
-            function addData(json) {
-                var labels = [];
-                var data = [];
-                for (var i = 0; i < json.length; i++) {
-                    labels.push(json[i].date);
-                    data.push(json[i].total);
-                }
-                var ctx = $("#myChart");
-                var myLineChart = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: 'Infections',
-                            data: data,
-                            backgroundColor: 'rgba(0, 119, 204, 0.3)'
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false
-                    }
-                });
-            }
+    <script src="https://cdn.jsdelivr.net/gh/xcash/bootstrap-autocomplete@v2.3.7/dist/latest/bootstrap-autocomplete.min.js"></script>
 
-            $.getJSON("/api/stats/day", addData);
-
-        })(jQuery);
-    </script>
 </head>
 <body>
 <div class="container">
+    <div class="row mt-2">
+        <div class="col align-items-center text-center">
+            <h2>Cases per day</h2>
+        </div>
+    </div>
     <div class="row">
-        <div class="col align-self-center" style="max-height: 400px">
-            <canvas height="400" id="myChart" width="400"></canvas>
+        <div class="col align-items-center text-center">
+            <div class="spinner-border text-primary text-center" id="totalPerDayChartStatus" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col align-items-center" style="max-height: 400px">
+            <canvas id="totalPerDayChart" width="400"></canvas>
+        </div>
+    </div>
+    <div class="row mt-2">
+        <div class="col align-items-center text-center">
+            <h2>Cases per day for a municipality</h2>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col" style="max-height: 400px">
+            <div class="form-group">
+                <label for="municipalityAutoComplete">City</label>
+                <input aria-describedby="municipalityAutoCompleteHelp" autocomplete="off"
+                       class="municipalityAutoComplete form-control" id="municipalityAutoComplete" type="text">
+                <small class="form-text text-muted" id="municipalityAutoCompleteHelp">Start tying to search.</small>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col align-items-center text-center">
+            <div class="spinner-border text-primary text-center" id="totalPerDayForMunicipalityStatus" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col align-items-center text-center" style="max-height: 400px">
+            <canvas id="totalPerDayForMunicipalityChart" width="400"></canvas>
         </div>
     </div>
 </div>
 
+
+<script>
+    (function ($) {
+        var totalPerDayChartStatus = $("#totalPerDayChartStatus");
+        var municipalityAutoComplete = $(".municipalityAutoComplete");
+        var totalPerDayForMunicipalityStatus = $("#totalPerDayForMunicipalityStatus");
+
+        totalPerDayChartStatus.show();
+        totalPerDayForMunicipalityStatus.hide();
+
+        function createTotalPerDayChart(json) {
+            var labels = [];
+            var data = [];
+            for (var i = 0; i < json.length; i++) {
+                labels.push(json[i].date);
+                data.push(json[i].total);
+            }
+            var ctx = $("#totalPerDayChart");
+            var myLineChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Total infections per day',
+                        data: data,
+                        backgroundColor: 'rgba(0, 119, 204, 0.3)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+            totalPerDayChartStatus.hide();
+        }
+
+        function createTotalPerDayForMunicipality(json, municipality) {
+            var labels = [];
+            var data = [];
+            for (var i = 0; i < json.length; i++) {
+                labels.push(json[i].date);
+                data.push(json[i].total);
+            }
+            var ctx = $("#totalPerDayForMunicipalityChart");
+            var myLineChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Total infections for city of ' + municipality,
+                        data: data,
+                        backgroundColor: 'rgba(0, 119, 204, 0.3)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+            totalPerDayForMunicipalityStatus.hide();
+        }
+
+        $.getJSON("/api/stats/day", createTotalPerDayChart);
+        //$.getJSON("/api/stats/municipality", createTotalPerDayChart);
+
+        municipalityAutoComplete.autoComplete({
+            resolverSettings: {
+                url: '/api/data/municipalities'
+            }
+        });
+
+        municipalityAutoComplete.on('autocomplete.select', function (evt, item) {
+            $.getJSON("/api/stats/day/municipalities/" + item, function (json) {
+                createTotalPerDayForMunicipality(json, item);
+            });
+        });
+
+        municipalityAutoComplete.change(function () {
+            totalPerDayForMunicipalityStatus.show();
+        });
+
+    })(jQuery);
+</script>
 </body>
 </html>

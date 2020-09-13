@@ -20,7 +20,12 @@ public class DataController {
     }
 
     @GetMapping("/provinces")
-    private Mono<List<String>> getProvince(@RequestParam(required = false) String q) {
+    private Mono<List<String>> getProvinces(@RequestParam(required = false) String q) {
         return Mono.from(cachedStatsService.getProvinces(q).collectList());
+    }
+
+    @GetMapping("/municipalities")
+    private Mono<List<String>> getMunicipalities(@RequestParam(required = false) String q) {
+        return Mono.from(cachedStatsService.getMunicipalities(q).collectList());
     }
 }
