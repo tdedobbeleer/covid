@@ -73,6 +73,7 @@
         var totalPerDayChartStatus = $("#totalPerDayChartStatus");
         var municipalityAutoComplete = $(".municipalityAutoComplete");
         var totalPerDayForMunicipalityStatus = $("#totalPerDayForMunicipalityStatus");
+        var totalPerDayForMunicipalityChart;
 
         totalPerDayChartStatus.show();
         totalPerDayForMunicipalityStatus.hide();
@@ -104,6 +105,9 @@
         }
 
         function createTotalPerDayForMunicipality(json, municipality) {
+            if (totalPerDayForMunicipalityChart !== undefined) {
+                totalPerDayForMunicipalityChart.destroy();
+            }
             var labels = [];
             var data = [];
             for (var i = 0; i < json.length; i++) {
@@ -111,8 +115,8 @@
                 data.push(json[i].total);
             }
             var ctx = $("#totalPerDayForMunicipalityChart");
-            var myLineChart = new Chart(ctx, {
-                type: 'bar',
+            totalPerDayForMunicipalityChart = new Chart(ctx, {
+                type: 'line',
                 data: {
                     labels: labels,
                     datasets: [{
