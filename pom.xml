@@ -42,6 +42,11 @@
             <artifactId>cache2k-api</artifactId>
             <version>1.4.0.Final</version>
         </dependency>
+        <dependency>
+            <groupId>org.cache2k</groupId>
+            <artifactId>cache2k-core</artifactId>
+            <version>1.4.0.Final</version>
+        </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.apache.commons/commons-lang3 -->
         <dependency>
