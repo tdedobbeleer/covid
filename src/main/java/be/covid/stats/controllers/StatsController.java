@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
 
 @RestController
-@RequestMapping("/stats")
+@RequestMapping("/api/stats")
 public class StatsController {
 
     private final CachedStatsService cachedStatsService;
