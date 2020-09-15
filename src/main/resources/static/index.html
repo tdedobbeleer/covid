@@ -1,6 +1,7 @@
 <!DOCTYPE HTML>
-<html>
+<html lang="en">
 <head>
+    <meta content="width=device-width, initial-scale=1, shrink-to-fit=no" name="viewport">
     <script crossorigin="anonymous"
             integrity="sha512-vBmx0N/uQOXznm/Nbkp7h0P1RfLSj0HQrFSzV8m7rOGyj30fYAOKHYvCNez+yM8IrfnW0TCodDEjRqf6fodf/Q=="
             src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.bundle.min.js"></script>
@@ -17,136 +18,113 @@
     <link crossorigin="anonymous" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
           integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/gh/xcash/bootstrap-autocomplete@v2.3.7/dist/latest/bootstrap-autocomplete.min.js"></script>
-
-    <style>
-        canvas {
-            height: 400px;
-        }
-    </style>
+    <title>Covid Bel</title>
 </head>
 
 <body>
-<div class="container-fluid">
-    <nav class="navbar navbar-expand-lg navbar-light bg-light">
-        <button aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"
-                class="navbar-toggler" data-target="#navbarSupportedContent" data-toggle="collapse" type="button">
-            <span class="navbar-toggler-icon"></span>
-        </button>
 
-        <div class="collapse navbar-collapse" id="navbarSupportedContent">
-            <ul class="navbar-nav mr-auto">
-                <li aria-controls="collapseCasesPerDay" aria-expanded="false" class="nav-item active"
-                    data-toggle="collapse" href="#collapseCasesPerDay">
-                    <a class="nav-link" href="#">Cases per day</a>
-                </li>
-                <li aria-controls="collapseCasesPerDayForProvince" aria-expanded="false" class="nav-item"
-                    data-toggle="collapse" href="#collapseCasesPerDayForMunicipality">
-                    <a class="nav-link" href="#">Cases per city</a>
-                </li>
-                <li aria-controls="collapseCasesPerDayForProvince" aria-expanded="false" class="nav-item"
-                    data-toggle="collapse" href="#collapseCasesPerDayForProvince">
-                    <a class="nav-link" href="#">Cases per province</a>
-                </li>
-            </ul>
-        </div>
-    </nav>
-    <div id="collapseParent">
-        <div class="collapse show" data-parent="#collapseParent" id="collapseCasesPerDay">
-            <div class="row mt-2">
-                <div class="col align-items-center text-center">
-                    <h2>Cases per day</h2>
+
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <button aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"
+            class="navbar-toggler" data-target="#navbarSupportedContent" data-toggle="collapse" type="button">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav mr-auto">
+            <li aria-controls="collapseCasesPerDay" aria-expanded="false" class="nav-item active"
+                data-toggle="collapse" href="#collapseCasesPerDay">
+                <a class="nav-link" href="#">Cases per day</a>
+            </li>
+            <li aria-controls="collapseCasesPerDayForProvince" aria-expanded="false" class="nav-item"
+                data-toggle="collapse" href="#collapseCasesPerDayForMunicipality">
+                <a class="nav-link" href="#">Cases per city</a>
+            </li>
+            <li aria-controls="collapseCasesPerDayForProvince" aria-expanded="false" class="nav-item"
+                data-toggle="collapse" href="#collapseCasesPerDayForProvince">
+                <a class="nav-link" href="#">Cases per province</a>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+<div class="container-fluid">
+    <div class="row">
+        <main class="col-12 pt-3 px-4" id="collapseParent" role="main">
+            <div class="chartjs-size-monitor"
+                 style="position: absolute; left: 0px; top: 0px; right: 0px; bottom: 0px; overflow: hidden; pointer-events: none; visibility: hidden; z-index: -1;">
+                <div class="chartjs-size-monitor-expand"
+                     style="position:absolute;left:0;top:0;right:0;bottom:0;overflow:hidden;pointer-events:none;visibility:hidden;z-index:-1;">
+                    <div style="position:absolute;width:1000000px;height:1000000px;left:0;top:0"></div>
+                </div>
+                <div class="chartjs-size-monitor-shrink"
+                     style="position:absolute;left:0;top:0;right:0;bottom:0;overflow:hidden;pointer-events:none;visibility:hidden;z-index:-1;">
+                    <div style="position:absolute;width:200%;height:200%;left:0; top:0"></div>
                 </div>
             </div>
-            <div class="row">
-                <div class="col align-items-center text-center">
+            <div class="collapse show" data-parent="#collapseParent" id="collapseCasesPerDay">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Cases per day</h1>
+                </div>
+                <div class="align-items-center text-center">
                     <div class="spinner-border text-primary text-center" id="totalPerDayChartStatus" role="status">
                         <span class="sr-only">Loading...</span>
                     </div>
                 </div>
-            </div>
-            <div class="row">
-                <div class="col-12 align-items-center">
-                    <div class="card">
-                        <div class="card-body">
-                            <canvas id="totalPerDayChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <div class="collapse" data-parent="#collapseParent" id="collapseCasesPerDayForMunicipality">
-            <div class="row mt-2">
-                <div class="col align-items-center text-center">
-                    <h2>Cases per day for a municipality</h2>
-                </div>
+                <canvas class="my-4 chartjs-render-monitor" height="649" id="totalPerDayChart"
+                        style="display: block; width: 1538px; height: 649px;" width="1538"></canvas>
             </div>
-            <div class="row">
-                <div class="col">
-                    <div class="form-group">
+
+            <div class="collapse" data-parent="#collapseParent" id="collapseCasesPerDayForMunicipality">
+                <div class="pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Cases per day for a municipality</h1>
+                    <div class="form-group w-100">
                         <label for="municipalityAutoComplete">City</label>
                         <input aria-describedby="municipalityAutoCompleteHelp" autocomplete="off"
                                class="municipalityAutoComplete form-control" id="municipalityAutoComplete" type="text">
                         <small class="form-text text-muted" id="municipalityAutoCompleteHelp">Start tying to
                             search.</small>
                     </div>
+
                 </div>
-            </div>
-            <div class="row">
-                <div class="col align-items-center text-center">
+                <div class="align-items-center text-center">
                     <div class="spinner-border text-primary text-center" id="totalPerDayForMunicipalityStatus"
                          role="status">
                         <span class="sr-only">Loading...</span>
                     </div>
                 </div>
-            </div>
-            <div class="row">
-                <div class="col-12 align-items-center text-center">
-                    <div class="card">
-                        <div class="card-body">
-                            <canvas id="totalPerDayForMunicipalityChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <div class="collapse" data-parent="#collapseParent" id="collapseCasesPerDayForProvince">
-            <div class="row mt-2">
-                <div class="col align-items-center text-center">
-                    <h2>Cases per day for a province</h2>
-                </div>
+                <canvas class="my-4 chartjs-render-monitor" height="649" id="totalPerDayForMunicipalityChart"
+                        style="display: block; width: 1538px; height: 649px;" width="1538"></canvas>
             </div>
-            <div class="row">
-                <div class="col" style="max-height: 400px">
-                    <div class="form-group">
+
+            <div class="collapse" data-parent="#collapseParent" id="collapseCasesPerDayForProvince">
+                <div class="pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Cases per day for a province</h1>
+                    <div class="form-group  w-100">
                         <label for="provinceAutoComplete">Province</label>
                         <input aria-describedby="provinceAutoCompleteHelp" autocomplete="off"
                                class="provinceAutoComplete form-control" id="provinceAutoComplete" type="text">
                         <small class="form-text text-muted" id="provinceAutoCompleteHelp">Start tying to search.</small>
                     </div>
+
                 </div>
-            </div>
-            <div class="row">
-                <div class="col align-items-center text-center">
+                <div class="align-items-center text-center">
                     <div class="spinner-border text-primary text-center" id="totalPerDayForProvinceStatus"
                          role="status">
                         <span class="sr-only">Loading...</span>
                     </div>
                 </div>
+
+                <canvas class="my-4 chartjs-render-monitor" height="649" id="totalPerDayForProvinceChart"
+                        style="display: block; width: 1538px; height: 649px;" width="1538"></canvas>
             </div>
-            <div class="row">
-                <div class="col align-items-center text-center">
-                    <div class="card">
-                        <div class="card-body">
-                            <canvas id="totalPerDayForProvinceChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+
+        </main>
     </div>
 </div>
+
 <script>
     (function ($) {
         var totalPerDayChartStatus = $("#totalPerDayChartStatus");
@@ -178,10 +156,6 @@
                         data: data,
                         backgroundColor: 'rgba(0, 119, 204, 0.3)'
                     }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false
                 }
             });
             totalPerDayChartStatus.hide();
@@ -207,10 +181,6 @@
                         data: data,
                         backgroundColor: 'rgba(0, 119, 204, 0.3)'
                     }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false
                 }
             });
             totalPerDayForMunicipalityStatus.hide();
@@ -235,10 +205,6 @@
                         data: data,
                         backgroundColor: 'rgba(0, 119, 204, 0.3)'
                     }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false
                 }
             });
             totalPerDayForProvinceStatus.hide();
