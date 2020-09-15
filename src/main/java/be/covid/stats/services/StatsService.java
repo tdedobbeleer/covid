@@ -8,6 +8,8 @@ public interface StatsService {
 
     Flux<CasesPerDayDTO> getCasesPerDayForMunicipality(int maxDays, String municipality);
 
+    Flux<CasesPerDayDTO> getCasesPerDayForProvince(int maxDays, String province);
+
     Flux<String> getProvinces(String q);
 
     Flux<String> getMunicipalities(String q);

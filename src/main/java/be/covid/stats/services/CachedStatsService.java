@@ -61,6 +61,12 @@ public class CachedStatsService implements StatsService {
             .loader(totalPerDayForMunicipalityCacheLoader())
             .build();
 
+    private final Cache<ComplexKey, Integer> totalPerDayPerProvinceCache = Cache2kBuilder.of(ComplexKey.class, Integer.class)
+            .expireAfterWrite(1, TimeUnit.HOURS)
+            .permitNullValues(false)
+            .loader(totalPerDayForProvinceCacheLoader())
+            .build();
+
     private List<String> municipalities = List.of();
     private List<String> provinces = List.of();
 
@@ -92,6 +98,17 @@ public class CachedStatsService implements StatsService {
                     return CasesPerDayDTO.builder()
                             .date(date)
                             .total(totalPerDayPerMunicipalityCache.get(ComplexKey.of(municipality, date))).build();
+                });
+    }
+
+    @Override
+    public Flux<CasesPerDayDTO> getCasesPerDayForProvince(int maxDays, String province) {
+        return Flux.fromStream(IntStream.range(2, ++maxDays + 2).boxed().sorted(Collections.reverseOrder()))
+                .map(i -> {
+                    String date = convert(LocalDate.now().minusDays(i), JSON_DATE_FORMAT);
+                    return CasesPerDayDTO.builder()
+                            .date(date)
+                            .total(totalPerDayPerProvinceCache.get(ComplexKey.of(province, date))).build();
                 });
     }
 
@@ -143,11 +160,29 @@ public class CachedStatsService implements StatsService {
                 .sum();
     }
 
+    private Integer totalForProvince(String json, String province, String date) {
+        JSONArray jsonArray = JsonPath.read(json, "$.[?(@.PROVINCE=='" + province + "' && @.DATE=='" + date + "')]");
+        return jsonArray.parallelStream()
+                .map(e -> this.<Integer>getKey(e, "CASES"))
+                .map(i -> i == null ? 0 : i)
+                .mapToInt(Integer::intValue)
+                .sum();
+    }
+
     private CacheLoader<ComplexKey, Integer> totalPerDayForMunicipalityCacheLoader() {
         return new CacheLoader<>() {
             @Override
             public Integer load(ComplexKey pair) throws Exception {
                 return totalForMunicipality(cachedResponses.get(DATE_MUNI_KEY), pair.getKey(), pair.getValue());
+            }
+        };
+    }
+
+    private CacheLoader<ComplexKey, Integer> totalPerDayForProvinceCacheLoader() {
+        return new CacheLoader<>() {
+            @Override
+            public Integer load(ComplexKey pair) throws Exception {
+                return totalForProvince(cachedResponses.get(AGE_SEX_KEY), pair.getKey(), pair.getValue());
             }
         };
     }

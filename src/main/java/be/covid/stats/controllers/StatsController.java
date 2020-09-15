@@ -20,11 +20,16 @@ public class StatsController {
 
     @GetMapping("/day")
     private Flux<CasesPerDayDTO> getAllCases() {
-        return cachedStatsService.getCasesPerDay(10);
+        return cachedStatsService.getCasesPerDay(5);
     }
 
     @GetMapping("/day/municipalities/{m}")
     private Flux<CasesPerDayDTO> getAllCasesPerDayForMunicipality(@PathVariable String m) {
-        return cachedStatsService.getCasesPerDayForMunicipality(10, m);
+        return cachedStatsService.getCasesPerDayForMunicipality(5, m);
+    }
+
+    @GetMapping("/day/provinces/{m}")
+    private Flux<CasesPerDayDTO> getAllCasesPerDayForProvince(@PathVariable String m) {
+        return cachedStatsService.getCasesPerDayForProvince(5, m);
     }
 }
