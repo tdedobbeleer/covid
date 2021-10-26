@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import reactor.core.publisher.Flux;
 
-import javax.annotation.PostConstruct;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -76,9 +75,13 @@ public class CachedStatsService implements StatsService {
     @Override
     public void preloadCache() {
         log.info("Preloading cache");
+        log.info("Preloading " + AGE_SEX_KEY + " cache");
         cachedResponses.get(AGE_SEX_KEY);
+        log.info("Preloading " + DATE_MUNI_KEY + " cache");
         cachedResponses.get(DATE_MUNI_KEY);
+        log.info("Collect provinces");
         provinces = collectProvinces();
+        log.info("Collect municipalities");
         municipalities = collectMunicipalities();
 
     }
