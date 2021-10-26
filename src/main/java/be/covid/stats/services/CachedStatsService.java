@@ -6,6 +6,7 @@ import com.jayway.jsonpath.JsonPath;
 import net.minidev.json.JSONArray;
 import org.cache2k.Cache;
 import org.cache2k.Cache2kBuilder;
+import org.cache2k.event.CacheEntryExpiredListener;
 import org.cache2k.integration.CacheLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +15,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import reactor.core.publisher.Flux;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -31,23 +36,21 @@ public class CachedStatsService implements StatsService {
     private static final String AGE_SEX_KEY = "AGE_SEX";
     private static final String DATE_MUNI_KEY = "DATE_MUNI";
     private final RestTemplate restTemplate = new RestTemplate();
-    private final Cache<String, String> cachedResponses = Cache2kBuilder.of(String.class, String.class)
+    private final Cache<String, Path> cachedResponses = Cache2kBuilder.of(String.class, Path.class)
             .permitNullValues(false)
             .expireAfterWrite(1, TimeUnit.HOURS)
+            .addListener((CacheEntryExpiredListener<String, Path>) (cache, entry) -> {
+                boolean deleted = entry.getValue().toFile().delete();
+                if (deleted) {
+                    log.info("Tmp file " + entry.getValue().toString() + " successfully deleted");
+                } else {
+                    log.error("Could not delete tmp file " + entry.getValue().toString());
+                }
+            })
             .loader(new CacheLoader<>() {
                 @Override
-                public String load(String key) throws Exception {
-                    String date = DateConversionUtils.convert(LocalDate.now(), DEFAULT_DATE_FORMAT);
-                    if (key.equals(AGE_SEX_KEY)) {
-                        ResponseEntity<String> ageSex
-                                = restTemplate.getForEntity(String.format(AGE_SEX_URL, date, date), String.class);
-                        return ageSex.getBody();
-                    } else if (key.equals(DATE_MUNI_KEY)) {
-                        ResponseEntity<String> dateMuni
-                                = restTemplate.getForEntity(String.format(DATE_MUNI, date, date), String.class);
-                        return dateMuni.getBody();
-                    }
-                    return "";
+                public Path load(String key) throws Exception {
+                    return getResponses(key);
                 }
             })
             .build();
@@ -73,17 +76,40 @@ public class CachedStatsService implements StatsService {
     private List<String> provinces = List.of();
 
     @Override
-    public void preloadCache() {
+    public void preloadCache() throws IOException {
         log.info("Preloading cache");
-        log.info("Preloading " + AGE_SEX_KEY + " cache");
+        log.info("Preloading " + AGE_SEX_KEY + " file");
         cachedResponses.get(AGE_SEX_KEY);
-        log.info("Preloading " + DATE_MUNI_KEY + " cache");
+        log.info("Preloading " + DATE_MUNI_KEY + " file");
         cachedResponses.get(DATE_MUNI_KEY);
         log.info("Collect provinces");
         provinces = collectProvinces();
         log.info("Collect municipalities");
         municipalities = collectMunicipalities();
+        log.info("Done preloading");
 
+    }
+
+    private Path getResponses(String key) {
+        String date = DateConversionUtils.convert(LocalDate.now(), DEFAULT_DATE_FORMAT);
+        if (key.equals(AGE_SEX_KEY)) {
+            ResponseEntity<String> ageSex
+                    = restTemplate.getForEntity(String.format(AGE_SEX_URL, date, date), String.class);
+            try {
+                return Files.writeString(Files.createTempFile(AGE_SEX_KEY, ".json"), Objects.requireNonNull(ageSex.getBody()));
+            } catch (IOException e) {
+                log.error("Could not get response.");
+            }
+        } else if (key.equals(DATE_MUNI_KEY)) {
+            ResponseEntity<String> dateMuni
+                    = restTemplate.getForEntity(String.format(DATE_MUNI, date, date), String.class);
+            try {
+                return Files.writeString(Files.createTempFile(DATE_MUNI_KEY, ".json"), Objects.requireNonNull(dateMuni.getBody()));
+            } catch (IOException e) {
+                log.error("Could not get response.");
+            }
+        }
+        return null;
     }
 
     @Override
@@ -143,7 +169,7 @@ public class CachedStatsService implements StatsService {
 
     }
 
-    private Integer totalFor(String json, String date) {
+    private Integer totalFor(File json, String date) throws IOException {
         JSONArray jsonArray = JsonPath.read(json, "$.[?(@.DATE=='" + date + "')]");
         return jsonArray.parallelStream()
                 .map(e -> this.<Integer>getKey(e, "CASES"))
@@ -152,7 +178,7 @@ public class CachedStatsService implements StatsService {
                 .sum();
     }
 
-    private Integer totalForMunicipality(String json, String municipality, String date) {
+    private Integer totalForMunicipality(File json, String municipality, String date) throws IOException {
         JSONArray jsonArray = JsonPath.read(json, "$.[?(@.TX_DESCR_NL=='" + municipality + "' && @.DATE=='" + date + "')]");
         return jsonArray.parallelStream()
                 .map(e -> this.<String>getKey(e, "CASES"))
@@ -167,7 +193,7 @@ public class CachedStatsService implements StatsService {
                 .sum();
     }
 
-    private Integer totalForProvince(String json, String province, String date) {
+    private Integer totalForProvince(File json, String province, String date) throws IOException {
         JSONArray jsonArray = JsonPath.read(json, "$.[?(@.PROVINCE=='" + province + "' && @.DATE=='" + date + "')]");
         return jsonArray.parallelStream()
                 .map(e -> this.<Integer>getKey(e, "CASES"))
@@ -180,7 +206,7 @@ public class CachedStatsService implements StatsService {
         return new CacheLoader<>() {
             @Override
             public Integer load(ComplexKey pair) throws Exception {
-                return totalForMunicipality(cachedResponses.get(DATE_MUNI_KEY), pair.getKey(), pair.getValue());
+                return totalForMunicipality(cachedResponses.get(DATE_MUNI_KEY).toFile(), pair.getKey(), pair.getValue());
             }
         };
     }
@@ -189,7 +215,7 @@ public class CachedStatsService implements StatsService {
         return new CacheLoader<>() {
             @Override
             public Integer load(ComplexKey pair) throws Exception {
-                return totalForProvince(cachedResponses.get(AGE_SEX_KEY), pair.getKey(), pair.getValue());
+                return totalForProvince(cachedResponses.get(AGE_SEX_KEY).toFile(), pair.getKey(), pair.getValue());
             }
         };
     }
@@ -198,14 +224,13 @@ public class CachedStatsService implements StatsService {
         return new CacheLoader<>() {
             @Override
             public Integer load(String key) throws Exception {
-                return totalFor(cachedResponses.get(AGE_SEX_KEY), key);
+                return totalFor(cachedResponses.get(AGE_SEX_KEY).toFile(), key);
             }
         };
     }
 
-    private List<String> collectProvinces() {
-        String json = cachedResponses.get(AGE_SEX_KEY);
-        JSONArray jsonArray = JsonPath.read(json, "$.[*]");
+    private List<String> collectProvinces() throws IOException {
+        JSONArray jsonArray = JsonPath.read(cachedResponses.get(AGE_SEX_KEY).toFile(), "$.[*]");
         return jsonArray.parallelStream()
                 .map(e -> this.<String>getKey(e, "PROVINCE"))
                 .filter(Objects::nonNull)
@@ -214,9 +239,8 @@ public class CachedStatsService implements StatsService {
                 .collect(Collectors.toList());
     }
 
-    private List<String> collectMunicipalities() {
-        String json = cachedResponses.get(DATE_MUNI_KEY);
-        JSONArray jsonArray = JsonPath.read(json, "$.[*]");
+    private List<String> collectMunicipalities() throws IOException {
+        JSONArray jsonArray = JsonPath.read(cachedResponses.get(DATE_MUNI_KEY).toFile(), "$.[*]");
         return jsonArray.parallelStream()
                 .map(e -> this.<String>getKey(e, "TX_DESCR_NL"))
                 .filter(Objects::nonNull)

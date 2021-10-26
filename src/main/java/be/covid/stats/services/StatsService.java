@@ -3,8 +3,11 @@ package be.covid.stats.services;
 import be.covid.stats.data.CasesPerDayDTO;
 import reactor.core.publisher.Flux;
 
+import java.io.IOException;
+
 public interface StatsService {
-    void preloadCache();
+
+    void preloadCache() throws IOException;
 
     Flux<CasesPerDayDTO> getCasesPerDay(int maxDays);
 
