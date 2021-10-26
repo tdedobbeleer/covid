@@ -10,8 +10,11 @@ import org.cache2k.event.CacheEntryExpiredListener;
 import org.cache2k.integration.CacheLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RequestCallback;
+import org.springframework.web.client.ResponseExtractor;
 import org.springframework.web.client.RestTemplate;
 import reactor.core.publisher.Flux;
 
@@ -19,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -93,23 +97,38 @@ public class CachedStatsService implements StatsService {
     private Path getResponses(String key) {
         String date = DateConversionUtils.convert(LocalDate.now(), DEFAULT_DATE_FORMAT);
         if (key.equals(AGE_SEX_KEY)) {
-            ResponseEntity<String> ageSex
-                    = restTemplate.getForEntity(String.format(AGE_SEX_URL, date, date), String.class);
             try {
-                return Files.writeString(Files.createTempFile(AGE_SEX_KEY, ".json"), Objects.requireNonNull(ageSex.getBody()));
+                Path path = Files.createTempFile(AGE_SEX_KEY, ".json");
+                getStream(String.format(AGE_SEX_URL, date, date), path);
+                return path;
             } catch (IOException e) {
                 log.error("Could not get response.");
             }
         } else if (key.equals(DATE_MUNI_KEY)) {
-            ResponseEntity<String> dateMuni
-                    = restTemplate.getForEntity(String.format(DATE_MUNI, date, date), String.class);
             try {
-                return Files.writeString(Files.createTempFile(DATE_MUNI_KEY, ".json"), Objects.requireNonNull(dateMuni.getBody()));
+                Path path = Files.createTempFile(DATE_MUNI_KEY, ".json");
+                getStream(String.format(DATE_MUNI, date, date), path);
+                return path;
             } catch (IOException e) {
                 log.error("Could not get response.");
             }
         }
         return null;
+    }
+
+    private void getStream(String url, Path path) {
+        // Optional Accept header
+        RequestCallback requestCallback = request -> request
+                .getHeaders()
+                .setAccept(Arrays.asList(MediaType.APPLICATION_OCTET_STREAM, MediaType.ALL));
+
+        // Streams the response instead of loading it all in memory
+        ResponseExtractor<Void> responseExtractor = response -> {
+            // Here you can write the inputstream to a file or any other place
+            Files.copy(response.getBody(), path, StandardCopyOption.REPLACE_EXISTING);
+            return null;
+        };
+        restTemplate.execute(url, HttpMethod.GET, requestCallback, responseExtractor);
     }
 
     @Override
