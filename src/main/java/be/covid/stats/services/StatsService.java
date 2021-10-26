@@ -4,6 +4,8 @@ import be.covid.stats.data.CasesPerDayDTO;
 import reactor.core.publisher.Flux;
 
 public interface StatsService {
+    void preloadCache();
+
     Flux<CasesPerDayDTO> getCasesPerDay(int maxDays);
 
     Flux<CasesPerDayDTO> getCasesPerDayForMunicipality(int maxDays, String municipality);

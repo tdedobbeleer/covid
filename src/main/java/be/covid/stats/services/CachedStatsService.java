@@ -7,6 +7,8 @@ import net.minidev.json.JSONArray;
 import org.cache2k.Cache;
 import org.cache2k.Cache2kBuilder;
 import org.cache2k.integration.CacheLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -23,6 +25,7 @@ import static be.covid.stats.utils.DateConversionUtils.*;
 
 @Service
 public class CachedStatsService implements StatsService {
+    private static final Logger log = LoggerFactory.getLogger(StatsService.class);
     private static final String SCIENSANO_URL = "https://epistat.sciensano.be/Data/%s";
     private static final String AGE_SEX_URL = SCIENSANO_URL + "/COVID19BE_CASES_AGESEX_%s.json";
     private static final String DATE_MUNI = SCIENSANO_URL + "/COVID19BE_CASES_MUNI_%s.json";
@@ -70,8 +73,9 @@ public class CachedStatsService implements StatsService {
     private List<String> municipalities = List.of();
     private List<String> provinces = List.of();
 
-    @PostConstruct
+    @Override
     public void preloadCache() {
+        log.info("Preloading cache");
         cachedResponses.get(AGE_SEX_KEY);
         cachedResponses.get(DATE_MUNI_KEY);
         provinces = collectProvinces();
