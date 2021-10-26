@@ -249,9 +249,9 @@ public class CachedStatsService implements StatsService {
     }
 
     private List<String> collectProvinces() throws IOException {
-        JSONArray jsonArray = JsonPath.read(cachedResponses.get(AGE_SEX_KEY).toFile(), "$.[*]");
+        JSONArray jsonArray = JsonPath.read(cachedResponses.get(AGE_SEX_KEY).toFile(), "$.[*].PROVINCE");
         return jsonArray.parallelStream()
-                .map(e -> this.<String>getKey(e, "PROVINCE"))
+                .map(Object::toString)
                 .filter(Objects::nonNull)
                 .distinct()
                 .sorted(Comparator.naturalOrder())
@@ -259,9 +259,9 @@ public class CachedStatsService implements StatsService {
     }
 
     private List<String> collectMunicipalities() throws IOException {
-        JSONArray jsonArray = JsonPath.read(cachedResponses.get(DATE_MUNI_KEY).toFile(), "$.[*]");
+        JSONArray jsonArray = JsonPath.read(cachedResponses.get(DATE_MUNI_KEY).toFile(), "$.[*].TX_DESCR_NL");
         return jsonArray.parallelStream()
-                .map(e -> this.<String>getKey(e, "TX_DESCR_NL"))
+                .map(Object::toString)
                 .filter(Objects::nonNull)
                 .distinct()
                 .sorted(Comparator.naturalOrder())
