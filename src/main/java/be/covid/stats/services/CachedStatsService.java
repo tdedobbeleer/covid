@@ -26,6 +26,8 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static be.covid.stats.utils.DateConversionUtils.*;
@@ -75,8 +77,8 @@ public class CachedStatsService implements StatsService {
             .loader(totalPerDayForProvinceCacheLoader())
             .build();
 
-    private String[] municipalities = new String[]{};
-    private String[] provinces = new String[]{};
+    private String municipalities = "";
+    private String provinces = "";
 
     @Override
     public void preloadCache() throws IOException {
@@ -165,7 +167,7 @@ public class CachedStatsService implements StatsService {
 
     @Override
     public Flux<String> getProvinces(String q) {
-        return Flux.fromArray(provinces)
+        return Flux.fromStream(Pattern.compile(",").splitAsStream(provinces))
                 .filter(s -> {
                     if (q == null) return true;
                     if (q.equals("*")) return true;
@@ -177,7 +179,7 @@ public class CachedStatsService implements StatsService {
 
     @Override
     public Flux<String> getMunicipalities(String q) {
-        return Flux.fromArray(municipalities)
+        return Flux.fromStream(Pattern.compile(",").splitAsStream(municipalities))
                 .filter(s -> {
                     if (q == null) return true;
                     if (q.equals("*")) return true;
@@ -247,24 +249,24 @@ public class CachedStatsService implements StatsService {
         };
     }
 
-    private String[] collectProvinces() throws IOException {
+    private String collectProvinces() throws IOException {
         JSONArray jsonArray = JsonPath.read(cachedResponses.get(AGE_SEX_KEY).toFile(), "$.[*].PROVINCE");
         return jsonArray.parallelStream()
                 .map(Object::toString)
                 .filter(Objects::nonNull)
                 .distinct()
                 .sorted(Comparator.naturalOrder())
-                .toArray(String[]::new);
+                .collect((Collectors.joining(",")));
     }
 
-    private String[] collectMunicipalities() throws IOException {
+    private String collectMunicipalities() throws IOException {
         JSONArray jsonArray = JsonPath.read(cachedResponses.get(DATE_MUNI_KEY).toFile(), "$.[*].TX_DESCR_NL");
         return jsonArray.parallelStream()
                 .map(Object::toString)
                 .filter(Objects::nonNull)
                 .distinct()
                 .sorted(Comparator.naturalOrder())
-                .toArray(String[]::new);
+                .collect((Collectors.joining(",")));
     }
 
     @SuppressWarnings("unchecked")
