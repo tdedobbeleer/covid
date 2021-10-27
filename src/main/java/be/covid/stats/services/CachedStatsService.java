@@ -2,8 +2,14 @@ package be.covid.stats.services;
 
 import be.covid.stats.data.CasesPerDayDTO;
 import be.covid.stats.utils.DateConversionUtils;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.jayway.jsonpath.JsonPath;
 import net.minidev.json.JSONArray;
+import org.apache.logging.log4j.util.Strings;
 import org.cache2k.Cache;
 import org.cache2k.Cache2kBuilder;
 import org.cache2k.event.CacheEntryExpiredListener;
@@ -26,7 +32,6 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -77,8 +82,8 @@ public class CachedStatsService implements StatsService {
             .loader(totalPerDayForProvinceCacheLoader())
             .build();
 
-    private String municipalities = "";
-    private String provinces = "";
+    private List<String> provinces = new ArrayList<>();
+    private List<String> municipalities = new ArrayList<>();
 
     @Override
     public void preloadCache() throws IOException {
@@ -167,7 +172,7 @@ public class CachedStatsService implements StatsService {
 
     @Override
     public Flux<String> getProvinces(String q) {
-        return Flux.fromStream(Pattern.compile(",").splitAsStream(provinces))
+        return Flux.fromIterable(provinces)
                 .filter(s -> {
                     if (q == null) return true;
                     if (q.equals("*")) return true;
@@ -179,7 +184,7 @@ public class CachedStatsService implements StatsService {
 
     @Override
     public Flux<String> getMunicipalities(String q) {
-        return Flux.fromStream(Pattern.compile(",").splitAsStream(municipalities))
+        return Flux.fromIterable(municipalities)
                 .filter(s -> {
                     if (q == null) return true;
                     if (q.equals("*")) return true;
@@ -249,24 +254,39 @@ public class CachedStatsService implements StatsService {
         };
     }
 
-    private String collectProvinces() throws IOException {
+    private List<String> collectProvinces() throws IOException {
         JSONArray jsonArray = JsonPath.read(cachedResponses.get(AGE_SEX_KEY).toFile(), "$.[*].PROVINCE");
         return jsonArray.parallelStream()
                 .map(Object::toString)
                 .filter(Objects::nonNull)
                 .distinct()
                 .sorted(Comparator.naturalOrder())
-                .collect((Collectors.joining(",")));
+                .collect((Collectors.toList()));
     }
 
-    private String collectMunicipalities() throws IOException {
-        JSONArray jsonArray = JsonPath.read(cachedResponses.get(DATE_MUNI_KEY).toFile(), "$.[*].TX_DESCR_NL");
-        return jsonArray.parallelStream()
-                .map(Object::toString)
-                .filter(Objects::nonNull)
-                .distinct()
-                .sorted(Comparator.naturalOrder())
-                .collect((Collectors.joining(",")));
+    private List<String> collectMunicipalities() throws IOException {
+        try {
+            TreeSet<String> result = new TreeSet<>();
+            JsonFactory jsonfactory = new JsonFactory();
+            ObjectMapper mapper = new ObjectMapper();
+            JsonParser parser = jsonfactory.createParser(cachedResponses.get(DATE_MUNI_KEY).toFile());
+
+            if (parser.nextToken() != JsonToken.START_ARRAY) {
+                throw new IllegalStateException("Expected an array");
+            }
+            while (parser.nextToken() == JsonToken.START_OBJECT) {
+                ObjectNode node = mapper.readTree(parser);
+                String entry = node.path("TX_DESCR_NL").toPrettyString().replace("\"", "");
+                if (Strings.isNotEmpty(entry)) result.add(entry);
+            }
+
+            parser.close();
+            return result.parallelStream().collect(Collectors.toList());
+
+        } catch (IOException jge) {
+            jge.printStackTrace();
+        }
+        return List.of();
     }
 
     @SuppressWarnings("unchecked")
