@@ -377,12 +377,4 @@ public class CachedStatsService implements StatsService {
         return "";
     }
 
-    @SuppressWarnings("unchecked")
-    private <T> T getKey(Object e, String name) {
-        if (e instanceof LinkedHashMap) {
-            return (T) ((LinkedHashMap) e).get(name);
-        }
-        return null;
-    }
-
 }
