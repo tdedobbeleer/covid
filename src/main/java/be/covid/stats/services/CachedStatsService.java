@@ -5,6 +5,7 @@ import be.covid.stats.utils.DateConversionUtils;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.jayway.jsonpath.JsonPath;
@@ -195,36 +196,115 @@ public class CachedStatsService implements StatsService {
     }
 
     private Integer totalFor(File json, String date) throws IOException {
-        JSONArray jsonArray = JsonPath.read(json, "$.[?(@.DATE=='" + date + "')]");
-        return jsonArray.parallelStream()
-                .map(e -> this.<Integer>getKey(e, "CASES"))
-                .map(i -> i == null ? 0 : i)
-                .mapToInt(Integer::intValue)
-                .sum();
+        try {
+            List<String> result = new ArrayList<>();
+            JsonFactory jsonfactory = new JsonFactory();
+            ObjectMapper mapper = new ObjectMapper();
+            JsonParser parser = jsonfactory.createParser(json);
+
+            if (parser.nextToken() != JsonToken.START_ARRAY) {
+                throw new IllegalStateException("Expected an array");
+            }
+            while (parser.nextToken() == JsonToken.START_OBJECT) {
+
+                ObjectNode node = mapper.readTree(parser);
+                String d = getNodeStringValue(node, "DATE");
+
+                if (d.equalsIgnoreCase(date)) {
+                    result.add(getNodeStringValue(node, "CASES"));
+                }
+            }
+
+            parser.close();
+            return result.parallelStream().filter(Strings::isNotEmpty).map(i -> {
+                        try {
+                            return Integer.parseInt(i);
+                        } catch (NumberFormatException e) {
+                            return 0;
+                        }
+                    }
+            ).mapToInt(Integer::intValue).sum();
+
+        } catch (IOException jge) {
+            jge.printStackTrace();
+        }
+        return 0;
     }
 
     private Integer totalForMunicipality(File json, String municipality, String date) throws IOException {
-        JSONArray jsonArray = JsonPath.read(json, "$.[?(@.TX_DESCR_NL=='" + municipality + "' && @.DATE=='" + date + "')]");
-        return jsonArray.parallelStream()
-                .map(e -> this.<String>getKey(e, "CASES"))
-                .map(s -> {
-                    try {
-                        return Integer.parseInt(s);
-                    } catch (NumberFormatException e) {
-                        return 0;
+        try {
+            List<String> result = new ArrayList<>();
+            JsonFactory jsonfactory = new JsonFactory();
+            ObjectMapper mapper = new ObjectMapper();
+            JsonParser parser = jsonfactory.createParser(json);
+
+            if (parser.nextToken() != JsonToken.START_ARRAY) {
+                throw new IllegalStateException("Expected an array");
+            }
+            while (parser.nextToken() == JsonToken.START_OBJECT) {
+
+                ObjectNode node = mapper.readTree(parser);
+                String m = getNodeStringValue(node, "TX_DESCR_NL");
+                String d = getNodeStringValue(node, "DATE");
+
+                if (m.equalsIgnoreCase(municipality)
+                        && d.equalsIgnoreCase(date)) {
+                    result.add(getNodeStringValue(node, "CASES"));
+                }
+            }
+
+            parser.close();
+            return result.parallelStream().filter(Strings::isNotEmpty).map(i -> {
+                        try {
+                            return Integer.parseInt(i);
+                        } catch (NumberFormatException e) {
+                            return 0;
+                        }
                     }
-                })
-                .mapToInt(Integer::intValue)
-                .sum();
+            ).mapToInt(Integer::intValue).sum();
+
+        } catch (IOException jge) {
+            jge.printStackTrace();
+        }
+        return 0;
     }
 
     private Integer totalForProvince(File json, String province, String date) throws IOException {
-        JSONArray jsonArray = JsonPath.read(json, "$.[?(@.PROVINCE=='" + province + "' && @.DATE=='" + date + "')]");
-        return jsonArray.parallelStream()
-                .map(e -> this.<Integer>getKey(e, "CASES"))
-                .map(i -> i == null ? 0 : i)
-                .mapToInt(Integer::intValue)
-                .sum();
+        try {
+            List<String> result = new ArrayList<>();
+            JsonFactory jsonfactory = new JsonFactory();
+            ObjectMapper mapper = new ObjectMapper();
+            JsonParser parser = jsonfactory.createParser(json);
+
+            if (parser.nextToken() != JsonToken.START_ARRAY) {
+                throw new IllegalStateException("Expected an array");
+            }
+            while (parser.nextToken() == JsonToken.START_OBJECT) {
+
+                ObjectNode node = mapper.readTree(parser);
+                String p = getNodeStringValue(node, "PROVINCE");
+                String d = getNodeStringValue(node, "DATE");
+
+                if (p.equalsIgnoreCase(province)
+                        && d.equalsIgnoreCase(date)) {
+                    result.add(getNodeStringValue(node, "CASES"));
+                }
+            }
+
+            parser.close();
+            return result.parallelStream().filter(Strings::isNotEmpty).map(i -> {
+                        try {
+                            return Integer.parseInt(i);
+                        } catch (NumberFormatException e) {
+                            return 0;
+                        }
+                    }
+            ).mapToInt(Integer::intValue).sum();
+
+        } catch (IOException jge) {
+            jge.printStackTrace();
+        }
+        return 0;
     }
 
     private CacheLoader<ComplexKey, Integer> totalPerDayForMunicipalityCacheLoader() {
@@ -276,7 +356,7 @@ public class CachedStatsService implements StatsService {
             }
             while (parser.nextToken() == JsonToken.START_OBJECT) {
                 ObjectNode node = mapper.readTree(parser);
-                String entry = node.path("TX_DESCR_NL").toPrettyString().replace("\"", "");
+                String entry = getNodeStringValue(node, "TX_DESCR_NL");
                 if (Strings.isNotEmpty(entry)) result.add(entry);
             }
 
@@ -289,6 +369,14 @@ public class CachedStatsService implements StatsService {
         return List.of();
     }
 
+    private String getNodeStringValue(ObjectNode node, String fieldName) {
+        JsonNode entry = node.get(fieldName);
+        if (entry != null) {
+            return entry.asText();
+        }
+        return "";
+    }
+
     @SuppressWarnings("unchecked")
     private <T> T getKey(Object e, String name) {
         if (e instanceof LinkedHashMap) {
@@ -296,4 +384,5 @@ public class CachedStatsService implements StatsService {
         }
         return null;
     }
+
 }
