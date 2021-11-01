@@ -1,7 +1,6 @@
 package be.covid.stats.services;
 
 import be.covid.stats.data.CasesPerDayDTO;
-import be.covid.stats.utils.DateConversionUtils;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
@@ -36,14 +35,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static be.covid.stats.utils.DateConversionUtils.*;
+import static be.covid.stats.utils.DateConversionUtils.JSON_DATE_FORMAT;
+import static be.covid.stats.utils.DateConversionUtils.convert;
 
 @Service
 public class CachedStatsService implements StatsService {
     private static final Logger log = LoggerFactory.getLogger(StatsService.class);
-    private static final String SCIENSANO_URL = "https://epistat.sciensano.be/Data/%s";
-    private static final String AGE_SEX_URL = SCIENSANO_URL + "/COVID19BE_CASES_AGESEX_%s.json";
-    private static final String DATE_MUNI = SCIENSANO_URL + "/COVID19BE_CASES_MUNI_%s.json";
+    private static final String SCIENSANO_URL = "https://epistat.sciensano.be/Data";
+    private static final String AGE_SEX_URL = SCIENSANO_URL + "/COVID19BE_CASES_AGESEX.json";
+    private static final String DATE_MUNI = SCIENSANO_URL + "/COVID19BE_CASES_MUNI.json";
     private static final String AGE_SEX_KEY = "AGE_SEX";
     private static final String DATE_MUNI_KEY = "DATE_MUNI";
     private final RestTemplate restTemplate = new RestTemplate();
@@ -102,11 +102,10 @@ public class CachedStatsService implements StatsService {
     }
 
     private Path getResponses(String key) {
-        String date = DateConversionUtils.convert(LocalDate.now(), DEFAULT_DATE_FORMAT);
         if (key.equals(AGE_SEX_KEY)) {
             try {
                 Path path = Files.createTempFile(AGE_SEX_KEY, ".json");
-                getStream(String.format(AGE_SEX_URL, date, date), path);
+                getStream(AGE_SEX_URL, path);
                 return path;
             } catch (IOException e) {
                 log.error("Could not get response.");
@@ -114,7 +113,7 @@ public class CachedStatsService implements StatsService {
         } else if (key.equals(DATE_MUNI_KEY)) {
             try {
                 Path path = Files.createTempFile(DATE_MUNI_KEY, ".json");
-                getStream(String.format(DATE_MUNI, date, date), path);
+                getStream(DATE_MUNI, path);
                 return path;
             } catch (IOException e) {
                 log.error("Could not get response.");

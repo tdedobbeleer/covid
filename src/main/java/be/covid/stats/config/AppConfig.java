@@ -21,7 +21,7 @@ public class AppConfig {
         try {
             cachedStatsService.preloadCache();
         } catch (Exception e) {
-            log.error("Could not preload data.");
+            log.error("Could not preload data.", e);
         }
     }
 }
